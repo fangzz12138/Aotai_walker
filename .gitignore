@@ -9,3 +9,5 @@ venv/
 .vscode/
 .DS_Store
 *.log
+savegame.json
+last_cart.json
