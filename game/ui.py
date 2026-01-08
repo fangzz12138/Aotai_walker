@@ -154,7 +154,7 @@ class UI:
         self.screen = screen
         
         # Font initialization with web/local fallback
-        font_paths = ["SimHei.ttf", "msyh.ttc", "Arial.ttf"]
+        font_paths = ["simhei.ttf", "msyh.ttc", "arial.ttf"]
         self.font = None
         
         # Try local files first (essential for web)
