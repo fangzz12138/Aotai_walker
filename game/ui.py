@@ -152,17 +152,35 @@ class Slider:
 class UI:
     def __init__(self, screen):
         self.screen = screen
-        try:
-            # Try to load a font that supports Chinese
-            self.font = pygame.font.SysFont("Microsoft YaHei", FONT_SIZE_NORMAL)
-            self.title_font = pygame.font.SysFont("Microsoft YaHei", FONT_SIZE_TITLE, bold=True)
-            self.small_font = pygame.font.SysFont("Microsoft YaHei", FONT_SIZE_SMALL)
-            self.large_font = pygame.font.SysFont("Microsoft YaHei", FONT_SIZE_LARGE)
-        except:
-            self.font = pygame.font.SysFont("SimHei", FONT_SIZE_NORMAL)
-            self.title_font = pygame.font.SysFont("SimHei", FONT_SIZE_TITLE)
-            self.small_font = pygame.font.SysFont("SimHei", FONT_SIZE_SMALL)
-            self.large_font = pygame.font.SysFont("SimHei", FONT_SIZE_LARGE)
+        
+        # Font initialization with web/local fallback
+        font_paths = ["SimHei.ttf", "msyh.ttc", "Arial.ttf"]
+        self.font = None
+        
+        # Try local files first (essential for web)
+        for path in font_paths:
+            if os.path.exists(path):
+                try:
+                    self.font = pygame.font.Font(path, FONT_SIZE_NORMAL)
+                    self.title_font = pygame.font.Font(path, FONT_SIZE_TITLE)
+                    self.small_font = pygame.font.Font(path, FONT_SIZE_SMALL)
+                    self.large_font = pygame.font.Font(path, FONT_SIZE_LARGE)
+                    break
+                except:
+                    continue
+        
+        if not self.font:
+            try:
+                # Try to load a font that supports Chinese from system
+                self.font = pygame.font.SysFont("Microsoft YaHei", FONT_SIZE_NORMAL)
+                self.title_font = pygame.font.SysFont("Microsoft YaHei", FONT_SIZE_TITLE, bold=True)
+                self.small_font = pygame.font.SysFont("Microsoft YaHei", FONT_SIZE_SMALL)
+                self.large_font = pygame.font.SysFont("Microsoft YaHei", FONT_SIZE_LARGE)
+            except:
+                self.font = pygame.font.SysFont("SimHei", FONT_SIZE_NORMAL)
+                self.title_font = pygame.font.SysFont("SimHei", FONT_SIZE_TITLE)
+                self.small_font = pygame.font.SysFont("SimHei", FONT_SIZE_SMALL)
+                self.large_font = pygame.font.SysFont("SimHei", FONT_SIZE_LARGE)
             
         self.buttons = []
         self.sliders = []

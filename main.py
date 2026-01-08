@@ -1329,6 +1329,11 @@ class Game:
             pygame.display.flip()
             await asyncio.sleep(0)
 
-if __name__ == "__main__":
+async def main():
+    print("Initializing game...")
     game = Game()
-    asyncio.run(game.run())
+    print("Starting main loop...")
+    await game.run()
+
+if __name__ == "__main__":
+    asyncio.run(main())
