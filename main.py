@@ -888,19 +888,93 @@ class Game:
             self.ui.add_message("没有帐篷，无法扎营！")
             return
             
-        self.state.stamina = min(self.state.stamina + 50, MAX_STAMINA)
-        self.state.sanity = min(self.state.sanity + 20, MAX_SANITY)
+        # Base Restoration
+        rest_stamina = 40
+        rest_sanity = 10
         
-        # Camping in a tent restores body temp to normal
+        # Penalties for poor condition
+        if self.state.hunger < 30 or self.state.thirst < 30:
+            rest_stamina *= 0.5
+            rest_sanity *= 0.5
+            self.ui.add_message("饥饿或口渴让你难以入眠，恢复效果减半。")
+            
+        self.state.stamina += rest_stamina
+        self.state.sanity += rest_sanity
+        
+        # Temperature Restoration
+        # Tent adds virtual warmth, but doesn't guarantee 37.0 if extremely cold/hungry
+        # Gear warmth helps here
+        gear_warmth = 10.0 # Base tent warmth bonus
+        for i_id in self.state.inventory:
+            # Sleeping bags?
+            item = self.item_system.get_item(i_id)
+            if item and 'temp_protection' in item['effects']:
+                gear_warmth += item['effects']['temp_protection']
+
+        # If hungry, body generates less heat
+        body_heat_gen = 1.0
+        if self.state.hunger < 20: body_heat_gen = 0.5
+        if self.state.health < 50: body_heat_gen *= 0.8
+        
+        # Calculate overnight recovery based on Environment and Gear
+        # Assume tent + sleeping bag creates a micro-climate
+        # If micro-climate > 15C, we recover to 37.
+        # If micro-climate < 0C, we might lose heat!
+        
+        # Simplified:
+        # If Hunger > 20 and Gear is decent -> Restore to near max
         if self.state.hunger > 20:
-            self.state.temperature = 37.0
-            self.ui.add_message("帐篷内很温暖，体温恢复正常。")
-        
+             # Good condition
+             if self.state.temperature < 35:
+                 self.state.temperature += 2.0
+             else:
+                 self.state.temperature = min(37.0, self.state.temperature + 1.0)
+        else:
+            # Hungry
+            if self.state.temperature < 35:
+                # Barely warming up
+                self.state.temperature += 0.5
+            else:
+                 # Maintain
+                 pass
+                 
+        self.state.clamp_stats()
+
         # Sleep for 12 hours
         hours_to_sleep = 12
         
-        self.state.update_time(hours_to_sleep)
-        self.update_environment()
+        # Iterate hours to apply continuous drain/effects
+        for _ in range(hours_to_sleep):
+            self.state.update_time(1)
+            self.update_environment() # Updates temp based on time of day
+            
+            # Additional Drain while sleeping
+            # Passive drain is usually handled in check_turn_end, but that runs once per ACTION.
+            # Overnight is 12 hours. We should apply 12x distinct drains or a lump sum,
+            # BUT check_turn_end logic might be too harsh if applied 12 times recursively with UI updates.
+            # We will manually apply simplified hourly drain here.
+            
+            # Hunger/Thirst drain slower while sleeping (0.5x)
+            h_drain = 1.0
+            t_drain = 1.5
+            
+            # Hypothermia Check
+            if self.state.temperature < 35.0:
+                 self.state.health -= 2 # Lose health if sleeping cold
+            if self.state.temperature < 32.0:
+                 self.state.health -= 5 # Critical cold
+                 
+            self.state.hunger -= h_drain
+            self.state.thirst -= t_drain
+            
+            # Sanity Drain from conditions
+            if self.state.hunger < 10 or self.state.thirst < 10:
+                self.state.sanity -= 0.5
+                
+            self.state.clamp_stats()
+            if self.state.health <= 0:
+                break # Died in sleep
+
         self.state.weather = self.weather_system.next_weather(self.state.weather, self.state.season)
         self.state.action_points = DAILY_ACTION_POINTS
         
@@ -926,9 +1000,14 @@ class Game:
             self.trigger_event(event)
             return
             
-        self.check_turn_end()
+        self.check_game_over_state() # Use dedicated check instead of check_turn_end to avoid double drain
         if self.game_phase != "GAME_OVER":
             self.setup_explore_ui()
+
+    def check_game_over_state(self):
+         if self.state.check_game_over():
+             self.game_phase = "GAME_OVER"
+             self.setup_game_over_ui()
 
     def check_turn_end(self):
         # Passive drain

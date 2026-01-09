@@ -304,6 +304,10 @@ class GameState:
             self.health += effects['heal']
             used = True
             
+        # Medicine item special handling (e.g. bandages)
+        # If it's not a food item (no hunger/thirst) but has heal/sanity, treat as used.
+        if item.get('type') == 'consumable' and 'heal' in effects: # Medicine
+             used = True
+
         self.clamp_stats()
-        return used
         return used

@@ -320,7 +320,7 @@
         "requirements": {},
         "effects": {
           "stamina": -15,
-          "thirst": -10,
+          "thirst": 10,
           "message": "你多走了两公里才找到一处细流。"
         }
       },
@@ -328,7 +328,7 @@
         "text": "忍耐 (口渴+20)",
         "requirements": {},
         "effects": {
-          "thirst": 20,
+          "thirst": -20,
           "sanity": -5,
           "message": "你决定忍耐到下一个营地，喉咙像火烧一样。"
         }

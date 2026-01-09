@@ -290,8 +290,8 @@ class UI:
         
         # Row 1: Bars
         self.draw_progress_bar(30, y, bar_w, bar_h, game_state.stamina, MAX_STAMINA, YELLOW, "体力", "⚡")
-        self.draw_progress_bar(30 + gap, y, bar_w, bar_h, game_state.hunger, MAX_HUNGER, ORANGE, "饥饿", "🍗")
-        self.draw_progress_bar(30 + gap*2, y, bar_w, bar_h, game_state.thirst, MAX_THIRST, BLUE, "口渴", "💧")
+        self.draw_progress_bar(30 + gap, y, bar_w, bar_h, game_state.hunger, MAX_HUNGER, ORANGE, "饱腹感", "🍗")
+        self.draw_progress_bar(30 + gap*2, y, bar_w, bar_h, game_state.thirst, MAX_THIRST, BLUE, "水分", "💧")
         self.draw_progress_bar(30 + gap*3, y, bar_w, bar_h, game_state.sanity, MAX_SANITY, PURPLE, "SAN", "🧠")
         self.draw_progress_bar(30 + gap*4, y, bar_w, bar_h, game_state.health, MAX_HEALTH, GREEN, "健康", "❤️")
         
@@ -314,15 +314,13 @@ class UI:
         self.draw_emoji("📅", 30, y - 5, 20)
         self.draw_text(f"Day {game_state.game_time} {game_state.day_time}:00", 55, y, self.small_font)
         
-        self.draw_emoji("🌤️", 30 + info_gap, y - 5, 20)
-        weather_cn = WEATHER_TRANSLATIONS.get(game_state.weather, game_state.weather)
-        self.draw_text(f"天气: {weather_cn}", 55 + info_gap, y, self.small_font)
-        
+        # Weather Removed (Redundant)
+
         # Draw Money Bag
-        money_icon_w = self.draw_emoji("💰", 30 + info_gap*2, y - 5, 20)
+        money_icon_w = self.draw_emoji("💰", 30 + info_gap, y - 5, 20)
         if not money_icon_w: # Fallback if SVG not found
-             self.draw_text("💰", 30 + info_gap*2, y, self.small_font)
-        self.draw_text(f"资金: {game_state.money}", 55 + info_gap*2, y, self.small_font)
+             self.draw_text("💰", 30 + info_gap, y, self.small_font)
+        self.draw_text(f"资金: {game_state.money}", 55 + info_gap, y, self.small_font)
         
         # Calculate max weight for display
         # We need item_system to check backpack bonus
@@ -335,15 +333,15 @@ class UI:
 
         weight = item_system.calculate_weight(game_state.inventory)
         color_w = RED if weight > max_w else TEXT_COLOR
-        self.draw_emoji("🎒", 30 + info_gap*3, y - 5, 20)
-        self.draw_text(f"负重: {weight:.1f}/{max_w:.0f}kg", 55 + info_gap*3, y, self.small_font, color=color_w)
+        self.draw_emoji("🎒", 30 + info_gap*2, y - 5, 20)
+        self.draw_text(f"负重: {weight:.1f}/{max_w:.0f}kg", 55 + info_gap*2, y, self.small_font, color=color_w)
         
-        self.draw_emoji("👣", 30 + info_gap*4, y - 5, 20)
-        self.draw_text(f"行动点: {game_state.action_points}", 55 + info_gap*4, y, self.small_font)
+        self.draw_emoji("👣", 30 + info_gap*3, y - 5, 20)
+        self.draw_text(f"行动点: {game_state.action_points}", 55 + info_gap*3, y, self.small_font)
         
         # Karma
-        self.draw_emoji("🌟", 30 + info_gap*5, y - 5, 20)
-        self.draw_text(f"人品: {game_state.karma}", 55 + info_gap*5, y, self.small_font)
+        self.draw_emoji("🌟", 30 + info_gap*4, y - 5, 20)
+        self.draw_text(f"人品: {game_state.karma}", 55 + info_gap*4, y, self.small_font)
 
     def draw_main_view(self, game_state, map_system):
         # Top: Journey Progress (Full Width)
