@@ -90,11 +90,11 @@
     "trigger_conditions": {"terrain": "forest", "chance": 0.05},
     "choices": [
       {
-        "text": "回头寻找 (消耗时间)",
+        "text": "回头寻找 (消耗2小时)",
         "requirements": {},
         "effects": {
           "action_points": -2,
-          "message": "你花了两小时找回了掉落的水壶。"
+          "message": "你花了两小时找回了掉落的水壶，天色变得更晚了。"
         }
       },
       {
