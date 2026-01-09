@@ -68,9 +68,28 @@ class Game:
         y += 50
         
         char_x = 50
+        char_emojis = {
+            "xiaomou": "🧢", 
+            "chen": "👓", 
+            "dragon": "💪", 
+            "student": "🎓"
+        }
+        
         for cid, cdata in CHARACTERS.items():
-            color = GREEN if self.state.character_id == cid else BLUE
-            self.ui.add_button(cdata['name'], lambda c=cid: self.select_character(c), char_x, y, 200, 50, color=color)
+            is_selected = self.state.character_id == cid
+            color = GREEN if is_selected else BLUE
+            icon = char_emojis.get(cid, "👤")
+            btn_text = cdata['name']
+            
+            # Show emoji in button
+            self.ui.add_button(btn_text, lambda c=cid: self.select_character(c), char_x, y, 200, 50, color=color, icon=icon)
+            
+            # Draw big emoji if selected - WE CAN'T DRAW HERE, it clears every frame.
+            # Instead, we'll add a non-interactive button (label) with the icon OR handle it in draw loop.
+            # Easiest is to add a transparent button with just the icon above.
+            if is_selected:
+                 self.ui.add_button("", None, char_x + 70, y - 70, 60, 60, color=BG_COLOR, icon=icon, icon_size=48)
+                
             char_x += 220
             
         # Character Description
@@ -83,9 +102,24 @@ class Game:
         y += 50
         
         season_x = 50
+        season_emojis = {
+            "spring": "🌸",
+            "summer": "☀️",
+            "autumn": "🍂",
+            "winter": "❄️"
+        }
+        
         for sid, sdata in SEASONS.items():
-            color = ORANGE if self.state.season == sid else BLUE
-            self.ui.add_button(sdata['name'], lambda s=sid: self.select_season(s), season_x, y, 200, 50, color=color)
+            is_selected = self.state.season == sid
+            color = ORANGE if is_selected else BLUE
+            icon = season_emojis.get(sid, "❓")
+            
+            self.ui.add_button(sdata['name'], lambda s=sid: self.select_season(s), season_x, y, 200, 50, color=color, icon=icon)
+            
+             # Draw big emoji if selected
+            if is_selected:
+                 self.ui.add_button("", None, season_x + 70, y - 70, 60, 60, color=BG_COLOR, icon=icon, icon_size=48)
+                
             season_x += 220
             
         # Season Description

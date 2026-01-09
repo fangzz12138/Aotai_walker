@@ -343,6 +343,10 @@ class UI:
         self.draw_emoji("🌟", 30 + info_gap*4, y - 5, 20)
         self.draw_text(f"人品: {game_state.karma}", 55 + info_gap*4, y, self.small_font)
 
+    def draw_emoji_overlay(self, emoji, x, y, size=64):
+        # Helper to draw emoji during setup phase (not part of button system)
+        self.draw_emoji(emoji, x, y, size)
+
     def draw_main_view(self, game_state, map_system):
         # Top: Journey Progress (Full Width)
         # Status panel is 0-100.
