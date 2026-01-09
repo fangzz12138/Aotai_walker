@@ -11,8 +11,8 @@ EFFECT_TRANSLATIONS = {
     "fuel": "燃料值",
     "move_cost_snow": "雪地移动消耗减少",
     "capacity_bonus": "负重上限增加",
-    "hunger": "饥饿恢复",
-    "thirst": "口渴恢复",
+    "hunger": "饱腹感恢复",
+    "thirst": "水分恢复",
     "stamina": "体力恢复",
     "sanity": "SAN值恢复",
     "sanity_recovery": "SAN值恢复",
@@ -52,7 +52,7 @@ WEATHER_TRANSLATIONS = {
 }
 
 class Button:
-    def __init__(self, x, y, width, height, text, callback, color=PANEL_COLOR, hover_color=ACCENT_COLOR, text_color=TEXT_COLOR, icon=None, tooltip=None):
+    def __init__(self, x, y, width, height, text, callback, color=PANEL_COLOR, hover_color=ACCENT_COLOR, text_color=TEXT_COLOR, icon=None, tooltip=None, icon_size=24, render_func=None):
         self.rect = pygame.Rect(x, y, width, height)
         self.text = text
         self.callback = callback
@@ -60,7 +60,9 @@ class Button:
         self.hover_color = hover_color
         self.text_color = text_color
         self.icon = icon
+        self.icon_size = icon_size
         self.tooltip = tooltip
+        self.render_func = render_func
         self.is_hovered = False
         self.icon_surf = None
 
@@ -70,12 +72,34 @@ class Button:
         pygame.draw.rect(screen, color, self.rect, border_radius=8)
         pygame.draw.rect(screen, LIGHT_GRAY, self.rect, 2, border_radius=8) # Border
         
+        # Custom Render Function (Replaces standard icon/text layout if provided specific control, 
+        # or we just render it on top/left)
+        # We will render it centered-ish or let the function decide.
+        # Let's pass the rect to the function.
+        if self.render_func:
+            # Helper to draw centered content
+            self.render_func(screen, self.rect)
+            
+            # If text exists, draw it at bottom or overlay?
+            # Let's assume render_func handles the main visual, and we draw text at bottom if it's a big button,
+            # or centered if it's a label.
+            # actually, let's keep the text drawing behavior but shift it if needed?
+            # User instructions: "display corresponding image on each option directly"
+            # I'll let render_func draw the graphic, and then draw text as an overlay or below.
+            
+            # Let's draw text at the bottom margin of the button
+            if self.text:
+                text_surf = font.render(self.text, True, self.text_color)
+                text_rect = text_surf.get_rect(midbottom=(self.rect.centerx, self.rect.bottom - 5))
+                screen.blit(text_surf, text_rect)
+            return
+
         text_x_offset = 0
         if self.icon and ui_ref:
-            emoji_surf = ui_ref.get_emoji_surface(self.icon, 24)
+            emoji_surf = ui_ref.get_emoji_surface(self.icon, self.icon_size)
             if emoji_surf:
-                screen.blit(emoji_surf, (self.rect.x + 10, self.rect.centery - 12))
-                text_x_offset = 30
+                screen.blit(emoji_surf, (self.rect.x + 10, self.rect.centery - self.icon_size // 2))
+                text_x_offset = self.icon_size + 6
 
         # Handle multiline text (simple wrap)
         if len(self.text) > 20 and " " not in self.text: # Simple heuristic for long Chinese text
@@ -232,6 +256,9 @@ class UI:
         return 0
 
     def add_message(self, message):
+        # Terminology fixes
+        message = message.replace("hunger", "饱腹感").replace("thirst", "水分")
+        
         self.message_log.append(message)
         if len(self.message_log) > 8:
             self.message_log.pop(0)
@@ -779,8 +806,8 @@ class UI:
     def clear_buttons_only(self):
         self.buttons = []
 
-    def add_button(self, text, callback, x, y, w=200, h=40, color=PANEL_COLOR, text_color=TEXT_COLOR, icon=None, tooltip=None):
-        btn = Button(x, y, w, h, text, callback, color=color, text_color=text_color, icon=icon, tooltip=tooltip)
+    def add_button(self, text, callback, x, y, w=200, h=40, color=PANEL_COLOR, text_color=TEXT_COLOR, icon=None, tooltip=None, icon_size=24, render_func=None):
+        btn = Button(x, y, w, h, text, callback, color=color, text_color=text_color, icon=icon, tooltip=tooltip, icon_size=icon_size, render_func=render_func)
         self.buttons.append(btn)
 
     def add_slider(self, x, y, w, h, min_val, max_val, initial_val):

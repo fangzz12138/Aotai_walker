@@ -41,6 +41,7 @@ class GameState:
         self.game_won = False
         self.status_message = "游戏开始。请做好准备。"
         self.triggered_events = set() # Set of event_ids that have been triggered
+        self.statuses = [] # Active conditions like 'sick'
         
         # Character & Season
         self.character_id = "xiaomou" # Default
@@ -197,10 +198,10 @@ class GameState:
             self.status_message = "你死于失温。"
         elif self.hunger <= 0:
             self.game_over = True
-            self.status_message = "你饿死了。"
+            self.status_message = "你因能量耗尽而脱水或饿倒。"
         elif self.thirst <= 0:
             self.game_over = True
-            self.status_message = "你渴死了。"
+            self.status_message = "你因极度脱水而倒下。"
         elif self.current_node_id == "end":
             self.game_over = True
             self.game_won = True
@@ -235,7 +236,9 @@ class GameState:
             "max_altitude": self.max_altitude,
             "lowest_temp": self.lowest_temp,
             "lowest_sanity": self.lowest_sanity,
-            "days_survived": self.days_survived
+            "days_survived": self.days_survived,
+            "character_id": self.character_id,
+            "season": self.season
         }
         try:
             with open(filename, 'w', encoding='utf-8') as f:
@@ -304,9 +307,15 @@ class GameState:
             self.health += effects['heal']
             used = True
             
+        if 'status_cure' in effects:
+            target_status = effects['status_cure']
+            if target_status in self.statuses:
+                self.statuses.remove(target_status)
+                used = True
+            
         # Medicine item special handling (e.g. bandages)
         # If it's not a food item (no hunger/thirst) but has heal/sanity, treat as used.
-        if item.get('type') == 'consumable' and 'heal' in effects: # Medicine
+        if item.get('type') == 'consumable' and ('heal' in effects or 'status_cure' in effects): # Medicine
              used = True
 
         self.clamp_stats()

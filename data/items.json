@@ -231,7 +231,7 @@
       "thirst": -10,
       "sanity": 2
     },
-    "description": "简单快捷的热食，但高盐会口渴。"
+    "description": "简单快捷的热食，但高盐会消耗水分。"
   },
   {
     "id": "food_dried_noodles",

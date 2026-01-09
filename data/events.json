@@ -1,5 +1,53 @@
 [
   {
+    "event_id": "hallucination_shadows",
+    "name": "诡异黑影",
+    "description": "你的精神有些恍惚，似乎看到树林里有人影晃动。",
+    "trigger_conditions": {"sanity_max": 30, "chance": 0.3},
+    "choices": [
+      {
+        "text": "靠近查看 (SAN-5)",
+        "requirements": {},
+        "effects": {
+          "sanity": -5,
+          "message": "你走近一看，只有树枝在风中摇曳。你感觉自己疯了。"
+        }
+      },
+      {
+        "text": "闭眼深呼吸 (SAN+5)",
+        "requirements": {},
+        "effects": {
+          "sanity": 5,
+          "message": "你努力让自己冷静下来，幻觉消失了。"
+        }
+      }
+    ]
+  },
+  {
+    "event_id": "hallucination_voice",
+    "name": "早已消失的声音",
+    "description": "你听到了熟悉的声音在呼唤你的名字，那声音来自你早已断联的朋友。",
+    "trigger_conditions": {"sanity_max": 20, "chance": 0.3},
+    "choices": [
+      {
+        "text": "回应 (SAN-10)",
+        "requirements": {},
+        "effects": {
+          "sanity": -10,
+          "message": "你对着空旷的山谷大喊，只有回声嘲笑你的孤独。"
+        }
+      },
+      {
+        "text": "捂住耳朵 (消耗体力)",
+        "requirements": {},
+        "effects": {
+          "stamina": -5,
+          "message": "你捂住耳朵狂奔了一段距离，直到声音消失。"
+        }
+      }
+    ]
+  },
+  {
     "event_id": "hiker_injured",
     "name": "受伤的驴友",
     "description": "你发现一位脚踝受伤的徒步者坐在路边痛苦呻吟。",
@@ -325,7 +373,7 @@
         }
       },
       {
-        "text": "忍耐 (口渴+20)",
+        "text": "忍耐 (水分+20)",
         "requirements": {},
         "effects": {
           "thirst": -20,

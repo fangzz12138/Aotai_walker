@@ -63,68 +63,66 @@ class Game:
         self.ui.clear_buttons()
         
         # Character Selection
-        y = 150
+        y = 80
         self.ui.add_button("选择角色:", None, 50, y, 200, 40, color=BG_COLOR)
-        y += 50
+        y += 120 # Space for highlight icon
         
         char_x = 50
-        char_emojis = {
-            "xiaomou": "🧢", 
-            "chen": "👓", 
-            "dragon": "💪", 
-            "student": "🎓"
-        }
         
         for cid, cdata in CHARACTERS.items():
             is_selected = self.state.character_id == cid
             color = GREEN if is_selected else BLUE
-            icon = char_emojis.get(cid, "👤")
             btn_text = cdata['name']
             
-            # Show emoji in button
-            self.ui.add_button(btn_text, lambda c=cid: self.select_character(c), char_x, y, 200, 50, color=color, icon=icon)
+            # Use visualizer to draw character on button
+            def make_char_renderer(char_id):
+                return lambda s, r: self.ui.visualizer.draw_character_icon(s, r.x, r.y, min(r.width, r.height), char_id)
+
+            self.ui.add_button(btn_text, lambda c=cid: self.select_character(c), char_x, y, 200, 60, color=color, render_func=make_char_renderer(cid))
             
-            # Draw big emoji if selected - WE CAN'T DRAW HERE, it clears every frame.
-            # Instead, we'll add a non-interactive button (label) with the icon OR handle it in draw loop.
-            # Easiest is to add a transparent button with just the icon above.
+            # Show big version if selected
             if is_selected:
-                 self.ui.add_button("", None, char_x + 70, y - 70, 60, 60, color=BG_COLOR, icon=icon, icon_size=48)
+                 def make_big_char_renderer(char_id):
+                     return lambda s, r: self.ui.visualizer.draw_character_icon(s, r.x, r.y, r.height, char_id)
+                 
+                 # Place highlight icon above the button
+                 self.ui.add_button("", None, char_x + 70, y - 70, 60, 60, color=BG_COLOR, render_func=make_big_char_renderer(cid))
                 
             char_x += 220
             
         # Character Description
         desc = CHARACTERS[self.state.character_id]['desc']
-        self.ui.add_button(desc, None, 50, y + 60, 800, 40, color=PANEL_COLOR)
+        self.ui.add_button(desc, None, 50, y + 80, 800, 40, color=PANEL_COLOR)
         
         # Season Selection
-        y += 150
+        y += 200 # Significant gap between sections
         self.ui.add_button("选择季节:", None, 50, y, 200, 40, color=BG_COLOR)
-        y += 50
+        y += 120 # Space for highlight icon
         
         season_x = 50
-        season_emojis = {
-            "spring": "🌸",
-            "summer": "☀️",
-            "autumn": "🍂",
-            "winter": "❄️"
-        }
         
         for sid, sdata in SEASONS.items():
             is_selected = self.state.season == sid
             color = ORANGE if is_selected else BLUE
-            icon = season_emojis.get(sid, "❓")
             
-            self.ui.add_button(sdata['name'], lambda s=sid: self.select_season(s), season_x, y, 200, 50, color=color, icon=icon)
+            def make_season_renderer(season_id):
+                return lambda s, r: self.ui.visualizer.draw_season_icon(s, r.x, r.y, min(r.width, r.height), season_id)
+
+            self.ui.add_button(sdata['name'], lambda s=sid: self.select_season(s), season_x, y, 200, 60, color=color, render_func=make_season_renderer(sid))
             
-             # Draw big emoji if selected
+             # Show big version if selected
             if is_selected:
-                 self.ui.add_button("", None, season_x + 70, y - 70, 60, 60, color=BG_COLOR, icon=icon, icon_size=48)
+                 def make_big_season_renderer(season_id):
+                     return lambda s, r: self.ui.visualizer.draw_season_icon(s, r.x, r.y, r.height, season_id)
+                 
+                 # Place highlight icon above the button
+                 self.ui.add_button("", None, season_x + 70, y - 70, 60, 60, color=BG_COLOR, render_func=make_big_season_renderer(sid))
                 
             season_x += 220
             
         # Season Description
         s_desc = SEASONS[self.state.season]['desc']
-        self.ui.add_button(s_desc, None, 50, y + 60, 800, 40, color=PANEL_COLOR)
+        self.ui.add_button(s_desc, None, 50, y + 80, 800, 40, color=PANEL_COLOR)
         
         # Confirm Button
         self.ui.add_button("确认并进入商店", self.confirm_setup, SCREEN_WIDTH - 250, SCREEN_HEIGHT - 80, 200, 50, color=GREEN)
@@ -159,7 +157,7 @@ class Game:
 
     def start_shop_phase(self):
         self.game_phase = "SHOP"
-        self.state.reset()
+        # self.state.reset() # Removed to preserve character selection from setup phase
         # Load last cart if exists
         self.cart = self.state.load_cart()
         # Validate cart (ensure items still exist and we have enough money)
@@ -484,10 +482,6 @@ class Game:
                 self.ui.add_button("终点已到达！", self.finish_game, btn_x, y, btn_w, 50, color=GOLD, icon="🏁")
                 y += 60
 
-        # Save Game Button
-        self.ui.add_button("保存进度", self.manual_save, btn_x, 660, btn_w, 40, color=BLUE, icon="💾")
-        self.ui.add_button("返回主菜单", self.setup_menu_phase, btn_x, 710, btn_w, 40, color=RED, icon="🏠")
-
         # Rest & Camp (Split width)
         y += 20
         half_w = (btn_w - 10) // 2
@@ -503,38 +497,54 @@ class Game:
         
         # Eat Snow (Conditional)
         if self.state.thirst <= 30:
-            # Check if snow is available (Weather is snow/storm OR Altitude > 3000 OR Terrain is snow-related?)
-            # Simplified: Altitude > 3000 usually has snow, or weather is snow/storm
+            # Check if snow is available
             node = self.map_system.get_node(self.state.current_node_id)
-            has_snow = self.state.weather in ["snow", "storm"] or node['altitude'] > 3000
+            has_snow = self.state.weather in ["snow", "storm"] or node.get('altitude', 0) > 3000
             
             if has_snow:
                 self.ui.add_button("吃雪解渴", self.confirm_eat_snow, btn_x, y, btn_w, 40, color=CYAN, icon="❄️")
                 y += 50
 
-        # Inventory (Right Bottom)
+        # Inventory (Right Bottom) - Two Columns
         y += 20
+        col_count = 2
+        item_w = (btn_w - 10) // col_count
+        item_h = 40
         
         consumables = []
-        for item_id, count in self.state.inventory.items():
+        for item_id, count in sorted(self.state.inventory.items()):
             item = self.item_system.get_item(item_id)
-            if item and ('hunger' in item['effects'] or 'thirst' in item['effects'] or 'heal' in item['effects'] or 'sanity' in item['effects']):
+            if item and any(k in item['effects'] for k in ['hunger', 'thirst', 'heal', 'sanity', 'stamina']):
                 consumables.append(item_id)
         
-        for item_id in consumables:
+        for i, item_id in enumerate(consumables):
+            row = i // col_count
+            col = i % col_count
+            curr_x = btn_x + col * (item_w + 10)
+            curr_y = y + row * (item_h + 5)
+            
+            # Stop if hitting fixed buttons at bottom
+            if curr_y + item_h > 650:
+                break
+                
             item = self.item_system.get_item(item_id)
             count = self.state.inventory.get(item_id, 0)
-            text = f"{item['name']} (x{count})"
+            text = f"{item['name']} x{count}"
             
-            # Tooltip
             tooltip = f"{item['description']}\n"
             for k, v in item['effects'].items():
                 k_cn = EFFECT_TRANSLATIONS.get(k, k)
                 tooltip += f"{k_cn}: {v}\n"
             
-            self.ui.add_button(text, lambda i=item_id: self.use_item(i), btn_x, y, btn_w, 35, color=ORANGE, icon=item.get('icon'), tooltip=tooltip)
-            y += 40
-            if y > 750: break
+            # Determine if icon exists
+            it_icon = item.get('icon')
+            if not it_icon: it_icon = "📦"
+            
+            self.ui.add_button(text, lambda i=item_id: self.use_item(i), curr_x, curr_y, item_w, item_h, color=ORANGE, icon=it_icon, tooltip=tooltip, icon_size=20)
+
+        # Fixed Buttons (Bottom)
+        self.ui.add_button("保存进度", self.manual_save, btn_x, 660, btn_w, 40, color=BLUE, icon="💾")
+        self.ui.add_button("返回主菜单", self.setup_menu_phase, btn_x, 710, btn_w, 40, color=RED, icon="🏠")
 
     def confirm_eat_snow(self):
         self.game_phase = "EAT_SNOW_CONFIRM"
@@ -930,7 +940,7 @@ class Game:
         if self.state.hunger < 30 or self.state.thirst < 30:
             rest_stamina *= 0.5
             rest_sanity *= 0.5
-            self.ui.add_message("饥饿或口渴让你难以入眠，恢复效果减半。")
+            self.ui.add_message("饱腹感或水分不足让你难以入眠，恢复效果减半。")
             
         self.state.stamina += rest_stamina
         self.state.sanity += rest_sanity
@@ -1104,6 +1114,16 @@ class Game:
     def handle_event_choice(self, choice):
         effects = choice.get('effects', {})
         
+        # Handle Random Outcomes (Select one effect set based on chance)
+        if 'random_outcome' in effects:
+            rand = random.random()
+            acc = 0
+            for outcome in effects['random_outcome']:
+                acc += outcome['chance']
+                if rand <= acc:
+                    effects = outcome['effects']
+                    break
+
         # Special Action: Scavenge
         if effects.get('special_action') == 'scavenge':
             self.scavenge()
@@ -1146,17 +1166,22 @@ class Game:
         if 'thirst' in effects:
             val = effects['thirst']
             self.state.thirst += val
-            changes.append({'icon': '💧', 'text': f"口渴 {'+' if val>0 else ''}{val}"})
+            changes.append({'icon': '💧', 'text': f"水分 {'+' if val>0 else ''}{val}"})
             
         if 'hunger' in effects:
             val = effects['hunger']
             self.state.hunger += val
-            changes.append({'icon': '🍗', 'text': f"饥饿 {'+' if val>0 else ''}{val}"})
+            changes.append({'icon': '🍗', 'text': f"饱腹感 {'+' if val>0 else ''}{val}"})
             
         if 'karma' in effects: 
             val = effects['karma']
             self.state.karma += val
             changes.append({'icon': '🌟', 'text': f"人品 {'+' if val>0 else ''}{val}"})
+            
+        if 'temp' in effects:
+            val = effects['temp']
+            self.state.temperature += val
+            changes.append({'icon': '🌡️', 'text': f"体温 {'+' if val>0 else ''}{val}"})
             
         if 'remove_item' in effects:
             item_id = effects['remove_item']
@@ -1178,6 +1203,13 @@ class Game:
             
         if 'stamina_cost_multiplier' in effects:
             changes.append({'icon': '⚠️', 'text': "体力消耗增加"})
+            
+        if 'status' in effects:
+            status = effects['status']
+            if status not in self.state.statuses:
+                self.state.statuses.append(status)
+                status_names = {"sick": "疾病", "lost": "迷路", "injured": "受伤"}
+                changes.append({'icon': '🤢', 'text': f"获得状态: {status_names.get(status, status)}"})
 
         narrative = effects.get('message', "发生了什么？")
         

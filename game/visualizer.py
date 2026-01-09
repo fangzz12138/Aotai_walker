@@ -375,31 +375,54 @@ class EnvironmentVisualizer:
              pygame.draw.polygon(screen, (240, 240, 250), snow_points)
 
     def draw_character(self, screen, game_state):
-        # Pixel Art Style Character
+        # Pixel Art Style Character - Use state to Determine look? 
+        # For main view, we respect the selected character ID if available in game_state
+        char_id = getattr(game_state, 'character_id', 'xiaomou')
+        
         cx = self.rect.x + self.rect.width // 2
         cy = self.rect.y + self.rect.height * 0.65
         
-        scale = 2
-        
+        self.draw_character_internal(screen, cx, cy, 2, char_id, animation_timer=self.animation_timer)
+
+    def draw_character_icon(self, screen, x, y, size, char_id):
+        # Draw a character for UI icon
+        # Scale based on size. size is roughly width/height box.
+        # Standard scale=2 makes ~30px high char.
+        scale = size / 40.0 
+        self.draw_character_internal(screen, x + size//2, y + size - 10*scale, scale, char_id, animation_timer=0)
+
+    def draw_character_internal(self, screen, cx, cy, scale, char_id, animation_timer=0):
         # Bobbing
-        bob = int(math.sin(self.animation_timer * 0.15) * 2)
+        bob = int(math.sin(animation_timer * 0.15) * 2) if animation_timer else 0
         
-        # Colors
-        skin = (255, 200, 180)
-        shirt = (200, 50, 50) # Red jacket
-        pants = (50, 50, 150) # Blue pants
-        pack = (160, 82, 45) # Brown pack
+        # Colors per character
+        styles = {
+            'xiaomou':  {'skin': (255, 200, 180), 'shirt': (200, 50, 50),   'pants': (50, 50, 150),   'pack': (160, 82, 45)},   # Red Jacket
+            'xiaochen': {'skin': (255, 220, 190), 'shirt': (255, 215, 0),   'pants': (34, 139, 34),   'pack': (210, 105, 30)},  # Yellow/Green
+            'menglong': {'skin': (200, 150, 130), 'shirt': (40, 40, 40),    'pants': (20, 20, 20),    'pack': (100, 100, 100)}, # Black/Tactical
+            'student':  {'skin': (255, 210, 190), 'shirt': (100, 149, 237), 'pants': (25, 25, 112),  'pack': (70, 130, 180)},  # Blue/Jeans
+        }
+        style = styles.get(char_id, styles['xiaomou'])
+        
+        skin = style['skin']
+        shirt = style['shirt']
+        pants = style['pants']
+        pack = style['pack']
         
         # Backpack
         pygame.draw.rect(screen, pack, (cx - 8*scale, cy - 22*scale + bob, 6*scale, 14*scale))
         
-        # Legs (Walking)
-        leg_anim = math.sin(self.animation_timer * 0.2)
+        # Legs (Walking only if animating)
+        l_off = 0
+        r_off = 0
+        if animation_timer:
+            leg_anim = math.sin(animation_timer * 0.2)
+            l_off = int(leg_anim * 5 * scale)
+            r_off = int(-leg_anim * 5 * scale)
+            
         # Left Leg
-        l_off = int(leg_anim * 5 * scale)
         pygame.draw.rect(screen, pants, (cx - 2*scale + l_off, cy - 8*scale, 3*scale, 8*scale))
         # Right Leg
-        r_off = int(-leg_anim * 5 * scale)
         pygame.draw.rect(screen, pants, (cx + 2*scale + r_off, cy - 8*scale, 3*scale, 8*scale))
         
         # Body
@@ -407,10 +430,80 @@ class EnvironmentVisualizer:
         
         # Head
         pygame.draw.rect(screen, skin, (cx - 3*scale, cy - 26*scale + bob, 6*scale, 6*scale))
-        
+        # Hat/Hair detail
+        if char_id == 'menglong': # Bandana?
+             pygame.draw.rect(screen, (200, 0, 0), (cx - 3*scale, cy - 26*scale + bob, 6*scale, 2*scale))
+        elif char_id == 'student': # Cap
+             pygame.draw.rect(screen, (30, 30, 100), (cx - 4*scale, cy - 28*scale + bob, 8*scale, 2*scale))
+
         # Arms
-        arm_off = int(-leg_anim * 4 * scale)
+        arm_off = int(-math.sin(animation_timer * 0.2) * 4 * scale) if animation_timer else 0
         pygame.draw.rect(screen, shirt, (cx + 4*scale, cy - 18*scale + bob + arm_off, 3*scale, 8*scale))
+
+    def draw_season_icon(self, screen, x, y, size, season_id):
+        # Mini environment scene
+        rect = pygame.Rect(x + 5, y + 5, size - 10, size - 20) # Padding
+        
+        # Sky
+        sky_colors = {
+            'spring': (135, 206, 235),
+            'summer': (100, 180, 255),
+            'autumn': (200, 190, 160),
+            'winter': (220, 220, 230)
+        }
+        pygame.draw.rect(screen, sky_colors.get(season_id, (100,100,255)), rect, border_radius=4)
+        
+        # Ground
+        ground_colors = {
+            'spring': (100, 200, 50),
+            'summer': (34, 139, 34),
+            'autumn': (205, 133, 63),
+            'winter': (240, 250, 255)
+        }
+        ground_h = rect.height * 0.3
+        ground_rect = pygame.Rect(rect.x, rect.bottom - ground_h, rect.width, ground_h)
+        pygame.draw.rect(screen, ground_colors.get(season_id, (100,100,100)), ground_rect, border_bottom_left_radius=4, border_bottom_right_radius=4)
+        
+        # Elements
+        cx = rect.centerx
+        cy = rect.bottom - ground_h
+        
+        if season_id == 'spring':
+            # Tree with pink flowers
+            self.draw_mini_tree(screen, cx, cy, (0, 100, 0), flowers=True)
+        elif season_id == 'summer':
+            # Bright Sun & Green Tree
+            pygame.draw.circle(screen, (255, 200, 0), (rect.right - 10, rect.top + 10), 8)
+            self.draw_mini_tree(screen, cx, cy, (0, 100, 0))
+        elif season_id == 'autumn':
+            # Orange Tree
+            self.draw_mini_tree(screen, cx, cy, (200, 100, 0))
+            # Falling leaves?
+            pygame.draw.rect(screen, (160, 82, 45), (cx-10, cy+5, 3, 2))
+            pygame.draw.rect(screen, (160, 82, 45), (cx+15, cy+8, 3, 2))
+        elif season_id == 'winter':
+            # Pine Tree with Snow
+            self.draw_mini_tree(screen, cx, cy, (40, 80, 40), snow=True, pine=True)
+            # Snowflake
+            pygame.draw.circle(screen, (255, 255, 255), (rect.x + 10, rect.top + 10), 2)
+            pygame.draw.circle(screen, (255, 255, 255), (rect.right - 15, rect.top + 20), 2)
+
+    def draw_mini_tree(self, screen, x, y, color, flowers=False, snow=False, pine=False):
+        # Trunk
+        pygame.draw.rect(screen, (101, 67, 33), (x - 2, y - 10, 4, 10))
+        
+        # Foliage
+        if pine:
+            pygame.draw.polygon(screen, color, [(x, y-25), (x-8, y-8), (x+8, y-8)])
+            if snow:
+                 pygame.draw.polygon(screen, (250, 250, 255), [(x, y-25), (x-3, y-18), (x+3, y-18)])
+        else:
+            pygame.draw.circle(screen, color, (x, y - 12), 10)
+            if flowers: # Pink dots
+                pygame.draw.circle(screen, (255, 192, 203), (x-3, y-14), 2)
+                pygame.draw.circle(screen, (255, 192, 203), (x+4, y-10), 2)
+                pygame.draw.circle(screen, (255, 192, 203), (x, y-16), 2)
+
 
 
     def draw_effects(self, screen, game_state):

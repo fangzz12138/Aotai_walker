@@ -105,53 +105,69 @@ class EventSystem:
         self.events = DataLoader.load_json("events.json")
 
     def check_event(self, game_state, map_system, context=None):
-        # Simple random event trigger
-        if random.random() < 0.3: # 30% chance per check
-            valid_events = []
-            current_node = map_system.get_node(game_state.current_node_id)
+        valid_events = []
+        current_node = map_system.get_node(game_state.current_node_id)
+        
+        for event in self.events:
+            # Check if unique and already triggered
+            if event.get("unique", False) and event['event_id'] in game_state.triggered_events:
+                continue
+
+            conditions = event.get("trigger_conditions", {})
             
-            for event in self.events:
-                # Check if unique and already triggered
-                if event.get("unique", False) and event['event_id'] in game_state.triggered_events:
+            # Check terrain condition
+            if "terrain" in conditions:
+                if current_node['terrain'] != conditions['terrain']:
+                    continue
+            
+            # Check weather condition (Support list or single string)
+            if "weather" in conditions:
+                cond_weather = conditions['weather']
+                if isinstance(cond_weather, list):
+                    if game_state.weather not in cond_weather:
+                        continue
+                elif game_state.weather != cond_weather:
                     continue
 
-                conditions = event.get("trigger_conditions", {})
-                
-                # Check terrain condition
-                if "terrain" in conditions:
-                    if current_node['terrain'] != conditions['terrain']:
-                        continue
-                
-                # Check weather condition (Support list or single string)
-                if "weather" in conditions:
-                    cond_weather = conditions['weather']
-                    if isinstance(cond_weather, list):
-                        if game_state.weather not in cond_weather:
-                            continue
-                    elif game_state.weather != cond_weather:
-                        continue
+            # Check time condition (day/night)
+            if "time" in conditions:
+                is_night = game_state.day_time < 6 or game_state.day_time > 19
+                if conditions['time'] == "night" and not is_night:
+                    continue
+                if conditions['time'] == "day" and is_night:
+                    continue
+                    
+            # Check time range
+            if "time_range" in conditions:
+                start, end = conditions['time_range']
+                if not (start <= game_state.day_time <= end):
+                    continue
 
-                # Check time condition (day/night)
-                if "time" in conditions:
-                    is_night = game_state.day_time < 6 or game_state.day_time > 19
-                    if conditions['time'] == "night" and not is_night:
-                        continue
-                    if conditions['time'] == "day" and is_night:
-                        continue
-                        
-                # Check time range
-                if "time_range" in conditions:
-                    start, end = conditions['time_range']
-                    if not (start <= game_state.day_time <= end):
-                        continue
+            # Check altitude
+            if "altitude_min" in conditions:
+                if current_node['altitude'] < conditions['altitude_min']:
+                    continue
 
-                # Check phase condition (e.g. camp, rest, hike)
-                if "phase" in conditions and context:
-                    if context.get('phase') != conditions['phase']:
-                        continue
-                
-                valid_events.append(event)
+            # Check sanity
+            if "sanity_max" in conditions:
+                if game_state.sanity > conditions['sanity_max']:
+                    continue
+
+            # Check phase condition (e.g. camp, rest, hike)
+            if "phase" in conditions and context:
+                if context.get('phase') != conditions['phase']:
+                    continue
             
-            if valid_events:
-                return random.choice(valid_events)
+            valid_events.append(event)
+        
+        # Pick one event based on its individual chance
+        final_events = []
+        for ev in valid_events:
+            chance = ev.get('trigger_conditions', {}).get('chance', 0.1)
+            if random.random() < chance:
+                final_events.append(ev)
+        
+        if final_events:
+            return random.choice(final_events)
+            
         return None
